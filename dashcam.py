@@ -6,9 +6,7 @@ from argparse import ArgumentParser
 from mpi4py.futures import MPIPoolExecutor
 import NetworkService
 from Vehicle import VehicleDetection
-from Service import VideoCapture
-from VideoCapture import VideoCapture
-import pdb
+from Service.VideoCapture import VideoCapture
 
 LIB_TEXT_DETECTION = "./libs/text_detection.so"
 LIB_GRAPH = "./libs/openvx_graph.so"

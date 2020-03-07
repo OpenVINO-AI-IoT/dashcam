@@ -37,7 +37,16 @@ python dashcam.py --video Text-detection-1.mp4
 
 # SOLID Architecture
 
-The dashcam project is organised into **S**ervice **O**n**L**ine **I**ndex **D**ata Architecture for Real-time data. This is with reference to the paper cited at [The Solid architecture for real-time management of big semantic data](https://www.sciencedirect.com/science/article/abs/pii/S0167739X1400209X). All data requests that are sent to the dashcam which uses the Index and Online Layers are grouped into Service Layers. The Merge layer for all the SOLID layers has been exposed as a Python executable. The docker environment provides access to all of the dashcam functionality. 
+The dashcam project is organised into: 
+
+## **S**ervice              The layer that communicates with Online and Index
+## **O**n**L**ine           The layer that performs real time processing of data
+## **I**ndex                The layer that enables batch processing or queries on the data
+## **D**ata                 The layer that enables persistence of raw data
+
+SOLID Architecture for Real-time data. This is with reference to the paper cited at [The Solid architecture for real-time management of big semantic data](https://www.sciencedirect.com/science/article/abs/pii/S0167739X1400209X). All data requests that are sent to the dashcam which uses the Index and Online Layers are grouped into Service Layers. The Merge layer for all the SOLID layers has been exposed as a Python executable. The docker environment provides access to all of the dashcam functionality. 
+
+![SOLID Architecture](./images/solid-arch.png)
 
 ## Data Layer
 
@@ -47,7 +56,7 @@ The data layer contains QGIS (Geographical Information System) data which contai
 
 ## Online Layer
 
-- Home, Holiday and Work modes are processed using OpenVX graph API. They produce gaussian filters of the video. 
+Home, Holiday and Work modes are processed using OpenVX graph API. They produce gaussian filters of the video. 
 
 ## Service Layer
 
@@ -74,6 +83,20 @@ Using Extremal Region Filter for the 2nd stage classifier of N&M algorithm Neuma
 An example of text detection has been provided here:
 
 ![Car Text Detected](./scripts/image_text.png)
+
+## OpenALPR
+
+OpenALPR is a popular license plate recogntion toolkit which can look for recognizable license plates in blind spots, while driving and on recording mode of the dashcam. 
+
+## Pre-buildt librraies included
+
+### OpenCV
+
+The project contains pre-built OpenCV library.
+
+### OpenVX
+
+The project contains pre-built OpenVX library.
 
 ## Services available
 
@@ -110,7 +133,6 @@ Image segmentation is done based on:
 - `Markers Dilation`
 
 Any detected text or vehicle or number plate that is in perspective view is warped using transform to show the end user in the demo video. 
-
 
 ### Videos for ALPR
 

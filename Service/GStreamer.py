@@ -15,7 +15,7 @@ class CLI_Main(object):
         bus = self.player.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_message)
-            
+
     def on_message(self, bus, message):
         t = message.type
         if t == Gst.MessageType.EOS:
@@ -39,9 +39,11 @@ class CLI_Main(object):
         time.sleep(1)
         loop.quit()
 
-GObject.threads_init()
-Gst.init(None)        
-mainclass = CLI_Main()
-thread.start_new_thread(mainclass.start, ())
-loop = GLib.MainLoop()
-loop.run()
+if __name__ == "__main__":
+
+    GObject.threads_init()
+    Gst.init(None)        
+    mainclass = CLI_Main()
+    thread.start_new_thread(mainclass.start, ())
+    loop = GLib.MainLoop()
+    loop.run()

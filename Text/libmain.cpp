@@ -4,11 +4,19 @@
 #define TXT_DECODE_VERSION "0.0.1"
 
 #include "Python.h"  // NOLINT(build/include_alpha)
-#include "object.h"
-#include "Repository/Python-3.6.1/Include/unicodeobject.h"
-#include "pycapsule.h"
-#include "capsulethunk.h"
-// #include "cxxabi.h"
+
+#include <vector>
+#include <iostream>
+#include <iomanip>
+#include <string>  // NOLINT(build/include_order)
+#include <vector>  // NOLINT(build/include_order)
+#include <fstream>  // NOLINT
+#include <iostream>
+#include <stdio.h>
+#include <sstream>
+#include <string>
+#include <iostream>     // std::cout
+#include <functional>
 
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
@@ -19,27 +27,18 @@
 #include <boost/python/raw_function.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <numpy/arrayobject.h>
+#include <numpy/ndarrayobject.h>
 
 #include "opencv2/opencv.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/cvstd.hpp"
-#include "opencv2/core.hpp"
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/text.hpp"
-
-// these need to be included after boost on OS X
-#include <string>  // NOLINT(build/include_order)
-#include <vector>  // NOLINT(build/include_order)
-#include <fstream>  // NOLINT
-#include <iostream>
 #include <stdio.h>
-
-// #include "text_detection.h"
-// #include "text_recognition.h"
-
-#include <iostream>     // std::cout
-#include <functional>
+#include <iostream>
+#include <stdlib.h>
+#include <opencv2/opencv.hpp>
 
 #define STRINGIFY(m) #m
 #define AS_STRING(m) STRINGIFY(m)
@@ -50,36 +49,33 @@ using namespace cv;
 namespace bp = boost::python;
 namespace np = boost::python::numpy;
 
-typedef cv::Mat3f Ttype;
-
-#include  <vector>
-#include  <iostream>
-#include  <iomanip>
-
-#include <sstream>
-#include <string>
-
-namespace bp = boost::python;
-namespace np = boost::python::numpy;
-
-#define NM1_CLASSIFIER "./trained_classifierNM1.xml"
-#define NM2_CLASSIFIER "./trained_classifierNM2.xml"
-#define ERGROUPING_CLASSIFIER "./trained_classifier_erGrouping.xml"
-#define OCRHMM_KNN_MODEL "./OCRHMM_knn_model_data.xml.gz"
-#define OCRHMM_TRANSITIONS_TABLE "./OCRHMM_transitions_table.xml"
+void groups_draw(cv::Mat &src, std::vector<cv::Rect> &groups)
+{
+    for (int i=(int)groups.size()-1; i>=0; i--)
+    {
+        if (src.type() == CV_8UC3)
+            cv::rectangle(src,groups.at(i).tl(),groups.at(i).br(),Scalar( 0, 255, 255 ), 3, 8 );
+        else
+            cv::rectangle(src,groups.at(i).tl(),groups.at(i).br(),Scalar( 255 ), 3, 8 );
+    }
+}
 
 class TextDetection 
 {
 public:
-  TextDetection(np::ndarray src) {
+  TextDetection(np::ndarray src, std::string classifierNM1, std::string classifier_NM2) {
     np::ndarray nd = np::array(src);
-    int rows = (int) nd.shape(0);
-    int cols = (int) nd.shape(1);
-    
-    boostPythonObject2Mat(nd, rows, cols);
+    rows = (int) nd.shape(0);
+    cols = (int) nd.shape(1);
 
-    ChanneliseFilters();
+    char * data = nd.get_data();
+    cv::Mat i_image(rows,cols,CV_8UC3,data,cv::Mat::AUTO_STEP);
+
+    image = i_image.clone();
+
+    ChanneliseFilters(classifierNM1, classifier_NM2);
   }
+
   TextDetection() {}
   ~TextDetection() {}
 
@@ -95,18 +91,13 @@ public:
     return channels;
   }
 
-  void boostPythonObject2Mat(np::ndarray nd, int rows, int cols) {
-    image = cv::Mat(rows, cols, CV_8UC3);
+  PyObject* Get_Image() {
 
-    char * data = nd.get_data();
+    //2D image with 3 channels.
+    npy_intp dimensions[3] = {image.rows, image.cols, image.channels()};
 
-    for(int i = 0; i < rows; i++) {
-      for(int j = 0; j < cols; j++) {
-        image.at<cv::Vec3b>(i,j)[0] = data[i*cols+j+0];
-        image.at<cv::Vec3b>(i,j)[1] = data[i*cols+j+1];
-        image.at<cv::Vec3b>(i,j)[2] = data[i*cols+j+2];
-      }
-    }
+    //image.dims = 2 for a 2D image, so add another dimension for channels.
+    return PyArray_SimpleNewFromData(image.dims + 1, (npy_intp*)&dimensions, NPY_UINT8, image.data);
   }
 
   std::vector<cv::Mat> extractImage(cv::Mat image, std::vector<cv::Rect> groups_rects) {
@@ -129,9 +120,9 @@ public:
     }
   }
 
-  vector<cv::Mat> createChannels(cv::Mat src) {
+  vector<cv::Mat> createChannels() {
     vector<cv::Mat> channels;
-    cv::text::computeNMChannels(src, channels, cv::text::ERFILTER_NM_IHSGrad);
+    cv::text::computeNMChannels(image, channels, cv::text::ERFILTER_NM_IHSGrad);
     cv::Mat expr;
     size_t length = channels.size();
     // preprocess channels to include black and the degree of hue factor
@@ -156,47 +147,45 @@ public:
     return cv::text::createERFilterNM2(cb2,minProbability);
   }
 
-  void ChanneliseFilters() {
-    channels = createChannels(image);
+  void ChanneliseFilters(cv::String NM1_CLASSIFIER="./trained_classifierNM1.xml", 
+  cv::String NM2_CLASSIFIER="./trained_classifierNM2.xml") {
+    channels = createChannels();
     filterStage1 = obtainFilterStage1(NM1_CLASSIFIER);
     filterStage2 = obtainFilterStage2(NM2_CLASSIFIER);
   }
 
-  int runFilter(vector<cv::Ptr<cv::text::ERFilter>>cb_vector, cv::Mat src, vector<cv::Mat> channels, 
-    vector<vector<cv::text::ERStat>> &regions, vector<vector<cv::Vec2i> > &groups, vector<cv::Rect> groups_rects) {
-    for(int j = 0; j < cb_vector.size(); j++) {
-        for(int i = 0; i < channels.size(); i++) {
-            cb_vector[j]->run(channels[i], regions[i]);
-        }
+  int runFilter(vector<vector<cv::text::ERStat>> &regions) {
+    for(int i = 0; i < channels.size(); i++) {
+      filterStage1->run(channels[i], regions[i]);
+      filterStage2->run(channels[i], regions[i]);
     }
 
-    // cv::text::erGrouping(src, channels, regions, groups, groups_rects, cv::text::ERGROUPING_ORIENTATION_HORIZ;
+    vector< vector<cv::Vec2i> > region_groups;
+    vector<cv::Rect> groups_boxes;
+    cv::text::erGrouping(image, channels, regions, region_groups, groups_boxes, cv::text::ERGROUPING_ORIENTATION_HORIZ);
+    groups_draw(image, groups_boxes);
+
+    groups_rects.assign(groups_boxes.begin(), groups_boxes.end());
 
     // memory clean-up
-    for(int j = 0; j < cb_vector.size(); j++) {
-        cb_vector[j].release();
-    }
+    filterStage1.release();
+    filterStage2.release();
 
     return 0;
   }
 
-  void RunFilters(vector<cv::Mat> channels, vector<vector<cv::Vec2i>> groups, vector<cv::Rect> groups_rects, 
-vector<cv::Ptr<cv::text::ERFilter>> cb_vector) {
+  void RunFilters(vector<cv::Mat> channels) {
 
     vector<vector<cv::text::ERStat>> regions(channels.size());
-    runFilter(cb_vector, image, channels, regions, groups, groups_rects);
-
-    printf("Rect: %d", groups_rects.size());
+    runFilter(regions);
 
     regions.clear();
   }
 
   void Run_Filters()
   {
-    vector<vector<cv::Vec2i>> groups;
-
     vector<cv::Ptr<cv::text::ERFilter>> cb_vector { getFilterStage1(), getFilterStage2() };
-    RunFilters(channels, groups, groups_rects, cb_vector);
+    RunFilters(channels);
   }
 
   private:
@@ -207,6 +196,8 @@ vector<cv::Ptr<cv::text::ERFilter>> cb_vector) {
     cv::Ptr<cv::text::ERFilter::Callback> cb2;
     vector<cv::Mat> channels;
     vector<cv::Rect> groups_rects;
+    int rows;
+    int cols;
 };
 
 BOOST_PYTHON_MODULE(libmain) {
@@ -218,9 +209,9 @@ BOOST_PYTHON_MODULE(libmain) {
 
   bp::scope().attr("__version__") = AS_STRING(TXT_DECODE_VERSION);
 
-  bp::class_<TextDetection>("TextDetection")
-      .def(bp::init<np::ndarray>())
-      .def("Run_Filters", &TextDetection::Run_Filters);
+  bp::class_<TextDetection>("TextDetection", bp::init<np::ndarray, std::string, std::string>())
+      .def("Run_Filters", &TextDetection::Run_Filters)
+      .def("Get_Image", &TextDetection::Get_Image);
 
   import_array1();
 

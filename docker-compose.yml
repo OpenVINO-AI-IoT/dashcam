@@ -4,6 +4,9 @@ services:
     build: .
     container_name: openalpr
     ports:
-      - "5679:5678"
+      - "6080:80"
     volumes:
+      - app-volume:/home/desktop
       - .:/home/dashcam
+volumes:
+  app-volume:

@@ -6,7 +6,7 @@ from NetworkService import NetworkService
 class VehicleDetection(NetworkService):
 
     def __init__(self, delay=-1, confidence_threshold=0.4, thickness=3, color=(0,0,255)):
-        super(VehicleDetection).__init__()
+        super(VehicleDetection, self).__init__()
         self.delay = delay
         self.confidence_threshold = confidence_threshold
         self.thickness = thickness

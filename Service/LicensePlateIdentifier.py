@@ -1,3 +1,5 @@
+import pandas as pd
+
 class LicensePlateIdentifier():
 
     def __init__(self, frame, alpr):
@@ -21,17 +23,7 @@ class LicensePlateIdentifier():
         return plate, confidence
 
     def extract_plates(self):
-        i = 0
-        plates = []
-        confidences = []
-        for plate in self.results['results']:
-            i += 1
-            for candidate in plate['candidates']:
-                plates.append(candidate['plate'])
-                confidences.append(candidate['confidence'])
-                break
-        
-        return plates, confidences
+        return self.results['results'], self.results['results'][0]['candidates']
 
     def get_plate_information(self, plate):
         dvla_memory_tag = [plate[0], plate[1]]
