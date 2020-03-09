@@ -46,8 +46,8 @@ if __name__ == "__main__":
         ret, frame = cap.read()
         if ret == True:
             txt.Initialize(frame, 
-            "/home/aswin/Documents/Courses/Udacity/Intel-Edge/Work/EdgeApp/License_Plate_Recognition/Dashcam-project/Text/trained_classifierNM1.xml", 
-            "/home/aswin/Documents/Courses/Udacity/Intel-Edge/Work/EdgeApp/License_Plate_Recognition/Dashcam-project/Text/trained_classifierNM2.xml")
+            "/home/dashcam/Text/trained_classifierNM1.xml", 
+            "/home/dashcam/Text/trained_classifierNM2.xml")
             txt.Run_Filters()
             image = txt.Groups_Draw(np.zeros_like(frame))
             out.write(image)

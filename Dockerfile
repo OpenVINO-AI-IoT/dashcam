@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 run apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
@@ -68,9 +68,6 @@ RUN mkdir -p /opt/dashcam/ALPR
 COPY ALPR/ /opt/dashcam/ALPR
 workdir /opt/dashcam/ALPR
 RUN python setup.py build_ext -i
-
-RUN ln -s  /opt/dashcam/ALPR/libalpr.so /home/dashcam/libs/
-RUN ln -s  /opt/dashcam/Text/libmain.so /home/dashcam/libs/
 
 COPY docker.pub /root/.ssh/authorized_keys
 

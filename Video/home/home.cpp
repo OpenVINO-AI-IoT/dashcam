@@ -187,11 +187,20 @@ int main( int argc, char * argv[] )
         void * ptr;
         ERROR_CHECK_STATUS( vxMapImagePatch( threshold_image, &rect, 0, &map_id, &addr, &ptr,
                                              VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X ) );
+        vx_perf_t perf = { 0 };
+        ERROR_CHECK_STATUS( vxQueryGraph( graph, VX_GRAPH_PERFORMANCE, &perf, sizeof( perf ) ) );
         cv::Mat mat( height, width, CV_8U, ptr, addr.stride_y );
 #if ENABLE_DISPLAY
         cv::imshow( "Gaussian 3x3 Blur", mat );
 #endif
         ERROR_CHECK_STATUS( vxUnmapImagePatch( threshold_image, map_id ) );
+
+        char text[128];
+        sprintf( text, "GraphName NumFrames Avg(ms) Min(ms)\nGaussian    %9d %f %f\n", 
+        perf.num, ( float )perf.avg, ( float )perf.min);
+        
+        cv::putText(mat, text, cv::Point( 0, 16 ), 
+        cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar( 128, 0, 0 ), 1, CV_AA );
 
         ////////
         // Display the results and grab the next input RGB frame for the next iteration.

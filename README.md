@@ -27,13 +27,7 @@ How to execute the App
 
 ## Unix / Linux
 
-sudo curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-
-sudo chmod +x /usr/local/bin/docker-compose
-
-docker-compose build openalpr --build-arg HOST_IP=.
-
-python dashcam.py --video Text-detection-1.mp4
+./run_project.sh
 
 # SOLID Architecture
 
@@ -86,9 +80,9 @@ An example of text detection has been provided here:
 
 ## OpenALPR
 
-OpenALPR is a popular license plate recogntion toolkit which can look for recognizable license plates in blind spots, while driving and on recording mode of the dashcam. 
+OpenALPR is a popular license plate recogntion toolkit which can look for recognizable license plates while driving and on recording mode of the dashcam. 
 
-## Pre-buildt librraies included
+## Pre-built librraies included
 
 ### OpenCV
 
@@ -98,26 +92,73 @@ The project contains pre-built OpenCV library.
 
 The project contains pre-built OpenVX library.
 
+## Results
+
+### Running OpenVX using Gaussian Filter
+
+cd Video/ && mkdir build && cmake .. && make all && cd home
+./home $INPUT_VIDEO $OUPUT_VIDEO $FPS $STRIDE
+
+### Running Text/ALPR detection with Boost Python
+
+```bash
+cd Text/
+python2.7 setup.py build_exit -i
+```
+
+```python
+
+from ALPR import libalpr
+
+alpr = lib_alpr.ALPRImageDetect()
+
+alpr.Attributes(os.path.abspath("./ALPR/alpr_config/runtime_data/gb.conf"), 
+"eu", "", os.path.abspath("./ALPR/alpr_config/runtime_data"))
+
+```
+
+```bash
+cd ALPR/
+python2.7 setup.py build_exit -i
+```
+
+```python
+
+from Text import libmain
+
+txt.Initialize(frame, 
+"/home/dashcam/Text/trained_classifierNM1.xml", 
+"/home/dashcam/Text/trained_classifierNM2.xml")
+txt.Run_Filters()
+image = txt.Groups_Draw(np.zeros_like(frame))
+
+```
+
+## DashCam Executable
+
+```bash
+python3 dashcam.py --video 
+```
+
+The dashcam project is run on text, ALPR and Vehicle detection from a single video. This is done to compare the performance results between the mode of execution.
+
+```bash
+python3 dahcam_extended.py --video
+```
+
+In this mode, the dashcam project is run on all three using separate videos. The vehicle detection is run under gaussian filter produced by OpenVX graph.
+
+```bash
+python3 dashcam_openvino.py --video
+```
+
+In this mode, Two custom layers are created within vehicle detection (SSD) model. The outputs are run by Inference Engine and using TBB / OMP frameworks. The code for custom layers is in `src/`.
+
 ## Services available
 
 ### GStreamer
 
 The gstreamer GSTParse is available as a C++ link below. GSTreamer has also got Python based interface which can be installed using `PyGObject`
-
-GStreamer Parse:
-----------------
-
-aacparse:
-
-[https://gstreamer.freedesktop.org/documentation/audioparsers/aacparse.html?gi-language=c](https://gstreamer.freedesktop.org/documentation/audioparsers/aacparse.html?gi-language=c)
-
-flacparse:
-
-[https://gstreamer.freedesktop.org/documentation/audioparsers/flacparse.html?gi-language=c](https://gstreamer.freedesktop.org/documentation/audioparsers/flacparse.html?gi-language=c)
-
-mpegaudioparse:
-
-[https://gstreamer.freedesktop.org/documentation/audioparsers/mpegaudioparse.html?gi-language=c](https://gstreamer.freedesktop.org/documentation/audioparsers/mpegaudioparse.html?gi-language=c)
 
 ### Spatial Information 
 
@@ -133,24 +174,6 @@ Image segmentation is done based on:
 - `Markers Dilation`
 
 Any detected text or vehicle or number plate that is in perspective view is warped using transform to show the end user in the demo video. 
-
-### Videos for ALPR
-
-[https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/ALPR-detection-1.mp4](https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/ALPR-detection-1.mp4)
-
-[https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/ALPR-detection-2.mp4](https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/ALPR-detection-2.mp4)
-
-### Videos for Text Recognition
-
-[https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Text-detection-1.mp4](https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Text-detection-1.mp4)
-
-[https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Text-detection-2.mp4](https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Text-detection-2.mp4)
-
-### Videos for Vehicle Detection
-
-[https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Vehicle-detection-1.mp4](https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Vehicle-detection-1.mp4)
-
-[https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Vehicle-detection-2.mp4](https://video-assets-dashcam.s3-website.eu-west-2.amazonaws.com/Vehicle-detection-2.mp4)
 
 ## Warning System
 
