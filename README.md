@@ -154,6 +154,8 @@ python3 dashcam_openvino.py --video
 
 In this mode, Two custom layers are created within vehicle detection (SSD) model. The outputs are run by Inference Engine and using TBB / OMP frameworks. The code for custom layers is in `src/`.
 
+![Dashcam OpenVX](./dashcam-video-openvx.gif)
+
 ## Services available
 
 ### GStreamer
