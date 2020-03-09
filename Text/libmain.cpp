@@ -60,10 +60,16 @@ void groups_draw(cv::Mat &src, std::vector<cv::Rect> &groups)
     }
 }
 
+namespace Dashcam {
+
 class TextDetection 
 {
 public:
-  TextDetection(np::ndarray src, std::string classifierNM1, std::string classifier_NM2) {
+  TextDetection() {}
+  ~TextDetection() {}
+
+  void Initialize(np::ndarray src, std::string classifierNM1, std::string classifier_NM2)
+  {
     np::ndarray nd = np::array(src);
     rows = (int) nd.shape(0);
     cols = (int) nd.shape(1);
@@ -76,8 +82,13 @@ public:
     ChanneliseFilters(classifierNM1, classifier_NM2);
   }
 
-  TextDetection() {}
-  ~TextDetection() {}
+  void setImage(char * data, int r, int c)
+  {
+      rows = r;
+      cols = c;
+      cv::Mat i_image(r, c, CV_8UC3, data, cv::Mat::AUTO_STEP);
+      image = i_image.clone();
+  }
 
   cv::Ptr<cv::text::ERFilter> getFilterStage1() {
     return filterStage1;
@@ -91,33 +102,13 @@ public:
     return channels;
   }
 
-  PyObject* Get_Image() {
+  PyObject* Get_Image(cv::Mat i_image) {
 
     //2D image with 3 channels.
-    npy_intp dimensions[3] = {image.rows, image.cols, image.channels()};
+    npy_intp dimensions[3] = {i_image.rows, i_image.cols, i_image.channels()};
 
     //image.dims = 2 for a 2D image, so add another dimension for channels.
-    return PyArray_SimpleNewFromData(image.dims + 1, (npy_intp*)&dimensions, NPY_UINT8, image.data);
-  }
-
-  std::vector<cv::Mat> extractImage(cv::Mat image, std::vector<cv::Rect> groups_rects) {
-    std::vector<cv::Mat> all_boxes(groups_rects.size());
-
-    int x, y, width, height;
-    for(int i = 0; i < groups_rects.size(); i++) {
-      x = groups_rects[i].x;
-      y = groups_rects[i].y;
-      width = groups_rects[i].width;
-      height = groups_rects[i].height;
-      all_boxes[i] = cv::Mat(height, width, image.type());
-      for(int j = x; j < (x+width); j++) {
-        for(int k = y; k < (y+height); k++) {
-          all_boxes[i].at<cv::Vec3b>(j-x,k-y)[0] = image.at<cv::Vec3b>(j,k)[0];
-          all_boxes[i].at<cv::Vec3b>(j-x,k-y)[1] = image.at<cv::Vec3b>(j,k)[1];
-          all_boxes[i].at<cv::Vec3b>(j-x,k-y)[2] = image.at<cv::Vec3b>(j,k)[2];
-        }
-      }
-    }
+    return PyArray_SimpleNewFromData(i_image.dims + 1, (npy_intp*)&dimensions, NPY_UINT8, i_image.data);
   }
 
   vector<cv::Mat> createChannels() {
@@ -163,8 +154,7 @@ public:
     vector< vector<cv::Vec2i> > region_groups;
     vector<cv::Rect> groups_boxes;
     cv::text::erGrouping(image, channels, regions, region_groups, groups_boxes, cv::text::ERGROUPING_ORIENTATION_HORIZ);
-    groups_draw(image, groups_boxes);
-
+    
     groups_rects.assign(groups_boxes.begin(), groups_boxes.end());
 
     // memory clean-up
@@ -188,6 +178,35 @@ public:
     RunFilters(channels);
   }
 
+  std::vector<std::tuple<int, int, int, int>> groupRects()
+  {
+    std::vector<std::tuple<int, int, int, int>> rects(groups_rects.size());
+    for(int i = 0; i < groups_rects.size(); i++) {
+      rects[i] = std::make_tuple(groups_rects[i].x, groups_rects[i].y, groups_rects[i].width, groups_rects[i].height);
+    }
+    return rects;
+  }
+
+  bp::list Groups_Rects()
+  {
+    bp::list rects;
+    for(int i = 0; i < groups_rects.size(); i++) {
+      rects.append(bp::make_tuple(groups_rects[i].x, groups_rects[i].y, groups_rects[i].width, groups_rects[i].height));
+    }
+    return rects;
+  }
+
+  PyObject* Groups_Draw(np::ndarray state)
+  {
+    np::ndarray nd = np::array(state);
+    char * data = nd.get_data();
+    cv::Mat state_image(rows, cols, CV_8UC3, data, cv::Mat::AUTO_STEP);
+
+    groups_draw( state_image, groups_rects );
+
+    return Get_Image( state_image );
+  }
+
   private:
     cv::Mat image;
     cv::Ptr<cv::text::ERFilter> filterStage1;
@@ -200,6 +219,10 @@ public:
     int cols;
 };
 
+}
+
+#ifdef USE_BOOST_MODULE
+
 BOOST_PYTHON_MODULE(libmain) {
 
   Py_Initialize();
@@ -209,10 +232,14 @@ BOOST_PYTHON_MODULE(libmain) {
 
   bp::scope().attr("__version__") = AS_STRING(TXT_DECODE_VERSION);
 
-  bp::class_<TextDetection>("TextDetection", bp::init<np::ndarray, std::string, std::string>())
+  bp::class_<TextDetection>("TextDetection")
+      .def("Initialize", &TextDetection::Initialize)
       .def("Run_Filters", &TextDetection::Run_Filters)
-      .def("Get_Image", &TextDetection::Get_Image);
+      .def("Groups_Rects", &TextDetection::Groups_Rects)
+      .def("Groups_Draw", &TextDetection::Groups_Draw);
 
   import_array1();
 
 }
+
+#endif

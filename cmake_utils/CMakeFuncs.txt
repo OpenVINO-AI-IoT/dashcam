@@ -1,0 +1,21 @@
+#
+# Usage
+#     FILTER_SOURCES()
+#
+# Filters HEADER_FILES_1, EXPORT_HEADER_FILES_1 and SOURCE_FILES_1 variables to remove Win or Linux files
+# Creates HEADER_FILES, EXPORT_HEADER_FILES and SOURCE_FILES variables
+#
+
+function ( FIND_DASHCAM_SOURCES )
+    
+    file( GLOB HEADER_FILES_TMP RELATIVE ${DASHCAM_SRC} *.hpp )
+    file( GLOB SOURCE_FILES_TMP RELATIVE ${DASHCAM_SRC} *.cpp )
+
+	
+	if (${ARGC} EQUAL 0 )
+        set( FILER_OUT_REGEXP "not used regexp" )
+    else()
+        set( FILER_OUT_REGEXP ${ARGV0} )
+    endif (${ARGC} EQUAL  0 )
+
+endfunction ( FIND_DASHCAM_SOURCES )

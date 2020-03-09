@@ -83,6 +83,9 @@ void VX_CALLBACK log_callback( vx_context    context,
 int main( int argc, char * argv[] )
 {
     const char * video_sequence = argv[1];
+    const char * video_output = argv[2];
+    const char * fps = argv[3];
+    const char * stride = argv[4];
     CGuiModule gui( video_sequence );
 
     // Try grab first video frame from the sequence using cv::VideoCapture
@@ -92,6 +95,8 @@ int main( int argc, char * argv[] )
         printf( "ERROR: input has no video\n" );
         return 1;
     }
+
+    gui.FrameWriter( video_output, (double) 25.0 );
 
     ////////
     // Set the application configuration parameters. Note that input video
@@ -138,14 +143,16 @@ int main( int argc, char * argv[] )
     }
     
     /* Now combine images together in the ouptut color image */
-    vxChannelCombineNode(graph, filters[num_filters - 3], filters[num_filters - 2], filters[num_filters - 1], NULL, 
-            threshold_image);
+    vxChannelCombineNode(graph, gray_image, filters[num_filters - 3], 
+    filters[num_filters - 2], filters[num_filters - 1], threshold_image);
 
     ERROR_CHECK_STATUS( vxReleaseImage( &yuv_image ) );
     for (int i = 0; i < num_filters; ++i) {
         vxReleaseImage(&filters[i]);
     }
     ERROR_CHECK_STATUS( vxVerifyGraph( graph ) );
+
+    int st = std::atoi(stride);
 
     ////////
     // Process the video sequence frame by frame until the end of sequence or aborted.
@@ -161,7 +168,7 @@ int main( int argc, char * argv[] )
         cv_rgb_image_region.end_x      = width;
         cv_rgb_image_region.end_y      = height;
         vx_imagepatch_addressing_t cv_rgb_image_layout;
-        cv_rgb_image_layout.stride_x   = 9;
+        cv_rgb_image_layout.stride_x   = st;
         cv_rgb_image_layout.stride_y   = gui.GetStride();
         vx_uint8 * cv_rgb_image_buffer = gui.GetBuffer();
         ERROR_CHECK_STATUS( vxCopyImagePatch( rgb_image, &cv_rgb_image_region, 0,
@@ -192,10 +199,14 @@ int main( int argc, char * argv[] )
         if( !gui.Grab() )
         {
             // Terminate the processing loop if the end of sequence is detected.
-            gui.WaitForKey();
+            // gui.WaitForKey();
             break;
         }
+
+        gui.Write( mat );
     }
+
+    gui.Release();
 
     ////////********
     // Query graph performance using VX_GRAPH_PERFORMANCE and print timing

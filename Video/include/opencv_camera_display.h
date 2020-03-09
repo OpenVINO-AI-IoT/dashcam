@@ -178,6 +178,25 @@ public:
 #endif
     }
 
+    void FrameWriter( const char * video_output, double fps )
+    {
+        cv::VideoWriter i_m_write( video_output, 
+        cv::VideoWriter::fourcc( 'M','J','P','G' ), fps, 
+        cv::Size( GetWidth(), GetHeight() ), false );
+        m_write = i_m_write;
+    }
+
+    void Write(cv::Mat image)
+    {
+        m_write.write( image );
+    }
+
+    void Release()
+    {
+        m_write.release();
+        m_cap.release();
+    }
+
     bool AbortRequested()
     {
         char  key = cv::waitKey( DEFAULT_WAITKEY_DELAY );
@@ -202,6 +221,7 @@ public:
 protected:
     std::string       m_windowName;
     cv::VideoCapture  m_cap;
+    cv::VideoWriter   m_write;
     cv::Mat           m_imgBGR;
     cv::Mat           m_imgRGB;
 };

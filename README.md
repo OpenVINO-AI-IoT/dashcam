@@ -31,7 +31,7 @@ sudo curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-
 
 sudo chmod +x /usr/local/bin/docker-compose
 
-docker-compose up -d --build
+docker-compose build openalpr --build-arg HOST_IP=.
 
 python dashcam.py --video Text-detection-1.mp4
 

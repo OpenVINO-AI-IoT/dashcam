@@ -8,5 +8,6 @@ services:
     volumes:
       - app-volume:/home/desktop
       - .:/home/dashcam
+      - /opt/intel/openvino:/opt/intel/openvino
 volumes:
   app-volume:

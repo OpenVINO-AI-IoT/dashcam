@@ -47,7 +47,9 @@ class NetworkService:
         self.input_blob = next(iter(self.network.inputs))
         self.output_blob = next(iter(self.network.outputs))
 
-        return
+        print(self.network.outputs)
+
+        return self.network.inputs[self.input_blob].shape
 
     def get_input_shape(self):
         '''
@@ -84,5 +86,5 @@ class NetworkService:
         '''
         Returns a list of the results for the output layer of the network.
         '''
-        return self.exec_network.requests[request_id].outputs[self.output_blob]
+        return self.exec_network.requests[request_id].outputs
 

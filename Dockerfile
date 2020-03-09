@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:16.04
 
 run apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
@@ -30,7 +30,8 @@ run apt-get install build-essential \
     libavcodec-dev libavformat-dev libswscale-dev libv4l-dev \
     libxvidcore-dev libx264-dev \
     software-properties-common \
-    gfortran -y
+    gfortran \
+    openssh-server -y
 
 RUN mkdir -p /opt/lib/boost
 workdir /opt/lib/boost
@@ -55,13 +56,21 @@ run cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr -DCMAKE_INSTALL_SYSCONFDIR:PATH=/etc 
 
 run python3 /home/openalpr/openalpr/src/bindings/python/setup.py install
 
-workdir /home/dashcam/Text
-RUN python2.7 setup.py build_ext -i
+RUN mkdir -p /opt/dashcam/include
+COPY include/ /opt/dashcam/include/
 
-workdir /home/dashcam/ALPR
-RUN python2.7 setup.py build_ext -i
+RUN mkdir -p /opt/dashcam/Text
+COPY Text/ /opt/dashcam/Text/
+workdir /opt/dashcam/Text
+RUN python setup.py build_ext -i
 
-RUN apt-get install -y openssh-server
+RUN mkdir -p /opt/dashcam/ALPR
+COPY ALPR/ /opt/dashcam/ALPR
+workdir /opt/dashcam/ALPR
+RUN python setup.py build_ext -i
+
+RUN ln -s  /opt/dashcam/ALPR/libalpr.so /home/dashcam/libs/
+RUN ln -s  /opt/dashcam/Text/libmain.so /home/dashcam/libs/
 
 COPY docker.pub /root/.ssh/authorized_keys
 
